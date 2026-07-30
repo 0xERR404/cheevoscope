@@ -300,7 +300,7 @@
   #tab-overall.active{background:rgba(224,165,48,0.16); border-color:rgba(224,165,48,0.4);}
   .tab-btn:not(.active):hover{border-color:var(--border-strong); color:var(--text);}
   .tab-panel{display:none;}
-  .tab-panel.active{display:block; animation:riseIn .4s ease both;}
+  .tab-panel.active{display:block; animation:riseIn .4s ease both; will-change:transform;}
 
   /* ---------- RA: список-полоски вместо карточек — иконки RA (обычно
      маленькие, обрезанные под квадрат с сайта) плохо смотрятся растянутыми
@@ -1771,42 +1771,72 @@ switchTab('steam');
 loadReport();
 pollSteamStatus();
 
-// Свайп влево/вправо переключает вкладки Steam ⇄ RA ⇄ Общая статистика —
-// удобно на телефоне, где до кнопок вкладок тянуться неудобно.
+// Свайп влево/вправо переключает вкладки Steam ⇄ RA ⇄ Общая статистика.
+// Контент следует за пальцем в реальном времени (а не дёргается разом по
+// отпусканию) — иначе жест ощущается как заторможенный.
 (function initSwipeNav(){
   const TAB_ORDER = ['steam', 'retro', 'overall'];
-  const MIN_DIST = 60;      // короче — считаем тапом/скроллом, не свайпом
-  const MAX_OFF_AXIS = 80;  // слишком большой вертикальный увод — это скролл, а не свайп
-  let startX = 0, startY = 0, tracking = false;
+  const MIN_DIST = 60;      // короче — считаем тапом, не свайпом
+  let startX = 0, startY = 0, tracking = false, dragging = false, transitioning = false;
+  let panelEl = null;
 
   function onStart(e){
-    if(e.touches.length !== 1) { tracking = false; return; }
-    // Свайп внутри модалки достижений или по самому списку карточек не
-    // трогаем — там либо своя прокрутка, либо это просто клик по плитке.
-    if(e.target.closest('#ach-modal-overlay')) { tracking = false; return; }
+    if(transitioning || e.touches.length !== 1){ tracking = false; return; }
+    if(e.target.closest('#ach-modal-overlay')){ tracking = false; return; }
     startX = e.touches[0].clientX;
     startY = e.touches[0].clientY;
     tracking = true;
+    dragging = false;
+    panelEl = document.querySelector('.tab-panel.active');
+  }
+
+  function onMove(e){
+    if(!tracking || !panelEl) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    if(!dragging){
+      if(Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+      if(Math.abs(dy) > Math.abs(dx)){ tracking = false; return; } // это вертикальный скролл — не мешаем
+      dragging = true;
+      panelEl.style.transition = 'none';
+    }
+    const idx = TAB_ORDER.indexOf(activeTab);
+    const atEdge = (idx === 0 && dx > 0) || (idx === TAB_ORDER.length - 1 && dx < 0);
+    panelEl.style.transform = `translateX(${dx * (atEdge ? 0.3 : 0.9)}px)`;
   }
 
   function onEnd(e){
     if(!tracking) return;
     tracking = false;
+    if(!dragging){ panelEl = null; return; }
+
     const t = e.changedTouches[0];
     const dx = t.clientX - startX;
-    const dy = t.clientY - startY;
-    if(Math.abs(dx) < MIN_DIST || Math.abs(dy) > MAX_OFF_AXIS) return;
-
     const idx = TAB_ORDER.indexOf(activeTab);
-    if(dx < 0 && idx < TAB_ORDER.length - 1){
-      switchTab(TAB_ORDER[idx + 1]);  // свайп влево -> следующая вкладка
-    } else if(dx > 0 && idx > 0){
-      switchTab(TAB_ORDER[idx - 1]);  // свайп вправо -> предыдущая вкладка
+    const goNext = dx < -MIN_DIST && idx < TAB_ORDER.length - 1;
+    const goPrev = dx > MIN_DIST && idx > 0;
+    const el = panelEl;
+    panelEl = null;
+
+    el.style.transition = 'transform .2s ease';
+    if(goNext || goPrev){
+      transitioning = true;
+      el.style.transform = `translateX(${goNext ? -40 : 40}px)`;
+      setTimeout(() => {
+        el.style.transition = 'none';
+        el.style.transform = '';
+        switchTab(TAB_ORDER[idx + (goNext ? 1 : -1)]);
+        transitioning = false;
+      }, 200);
+    } else {
+      el.style.transform = 'translateX(0)';
     }
   }
 
   const wrap = document.querySelector('.wrap');
   wrap.addEventListener('touchstart', onStart, {passive: true});
+  wrap.addEventListener('touchmove', onMove, {passive: true});
   wrap.addEventListener('touchend', onEnd, {passive: true});
 })();
 
