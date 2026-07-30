@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CheevoScope</title>
+<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<meta name="theme-color" content="#100e0a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CheevoScope">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /*
+    Палитра v5 — "латунь и бирюза": прошлая версия по факту осталась в той
+    же холодной сине-фиолетовой гамме (индиго/маджента = синий+розовый —
+    рядом на круге). Здесь база тёплая нейтрально-чёрная (не сине-чёрная),
+    основной акцент — старая латунь/бронза (не лимонно-жёлтое золото), и у
+    платформ реально разные, не соседние оттенки: Steam = бирюза (холодный
+    зелёный полюс), RetroAchievements = терракота (тёплый красный полюс).
+    Тиры редкости (WoW-конвенция gray→white→green→blue→purple→gold) не
+    трогаю — это узнаваемый геймерский стандарт, а не часть общей темы.
+  */
+  :root{
+    --bg-0:#0a0906;
+    --bg-1:#100e0a;
+    --panel:#181510;
+    --panel-2:#201b14;
+    --border:rgba(255,246,230,0.07);
+    --border-strong:rgba(255,246,230,0.18);
+    --text:#a89e8e;
+    --text-bright:#f5efe2;
+    --text-dim:#6b6355;
+    --steam:#2bc4a8;
+    --steam-glow:rgba(43,196,168,0.24);
+    --retro:#e0673d;
+    --retro-glow:rgba(224,103,61,0.24);
+    --cyan:#2bc4a8;
+    --cyan-glow:rgba(43,196,168,0.22);
+    --indigo:#c98a3e;
+    --indigo-glow:rgba(201,138,62,0.26);
+    --magenta:#d9566a;
+    --magenta-glow:rgba(217,86,106,0.22);
+    --gold:#e0a530;
+    --gold-glow:rgba(224,165,48,0.26);
+    --green:#5cb37a;
+    --green-glow:rgba(92,179,122,0.22);
+    --red:#d9566a;
+    --font-display:'Space Grotesk','Arial Narrow',Arial,sans-serif;
+    --font-body:'Inter',Arial,Helvetica,sans-serif;
+    --font-mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scrollbar-color: var(--border-strong) transparent;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--bg-0);
+    color:var(--text);
+    font-family:var(--font-body);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{width:100%; max-width:1160px; margin:0 auto; padding:0 0 60px; box-sizing:border-box;}
+  svg{display:block;}
+
+  @keyframes riseIn{
+    from{opacity:0; transform:translateY(10px);}
+    to{opacity:1; transform:translateY(0);}
+  }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important; transition:none !important;}
+  }
+
+  /* ---------- шапка ---------- */
+  header{
+    position:sticky; top:0; z-index:10;
+    background:rgba(7,10,16,0.78);
+    backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
+    border-bottom:1px solid var(--border);
+    padding:14px 24px;
+    display:flex; justify-content:space-between; align-items:center;
+    flex-wrap:wrap; gap:16px;
+    margin-bottom:28px;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-mark{
+    width:38px; height:38px; border-radius:11px; flex-shrink:0;
+    background:var(--panel-2); border:1px solid var(--border-strong);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .brand-mark svg{width:19px; height:19px; color:var(--gold);}
+  .title-block h1{
+    font-family:var(--font-display);
+    font-size:24px; font-weight:700; letter-spacing:0.01em;
+    margin:0; line-height:1.15;
+    color:var(--text-bright);
+  }
+  .title-block .subtitle{color:var(--text-dim); font-size:11.5px; margin-top:2px;}
+
+  .actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap;}
+
+  #refresh-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--gold);
+    color:#1a1408; border:none;
+    font-family:var(--font-body); font-weight:700; font-size:13px;
+    padding:10px 20px 10px 16px; border-radius:999px; cursor:pointer;
+    letter-spacing:0.01em;
+    transition:transform .15s ease, filter .15s ease;
+  }
+  #refresh-btn svg{width:15px; height:15px;}
+  #refresh-btn:hover{transform:translateY(-1px); filter:brightness(1.08);}
+  #refresh-btn:active{transform:translateY(0);}
+  #refresh-btn:disabled{background:#232b36; color:var(--text-dim); cursor:default; transform:none;}
+  #refresh-btn.spinning svg{animation:spin 0.9s linear infinite;}
+
+  #refresh-both-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    background:transparent;
+    color:var(--text-bright); border:1px solid var(--border-strong);
+    font-family:var(--font-body); font-weight:700; font-size:13px;
+    padding:10px 20px 10px 16px; border-radius:999px; cursor:pointer;
+    letter-spacing:0.01em;
+    transition:transform .15s ease, border-color .15s ease, color .15s ease;
+  }
+  #refresh-both-btn svg{width:15px; height:15px;}
+  #refresh-both-btn:hover{transform:translateY(-1px); border-color:var(--gold); color:var(--gold);}
+  #refresh-both-btn:active{transform:translateY(0);}
+  #refresh-both-btn:disabled{background:transparent; color:var(--text-dim); border-color:var(--border); cursor:default; transform:none;}
+  #refresh-both-btn.spinning svg{animation:spin 0.9s linear infinite;}
+
+  #force-refresh-btn{
+    background:transparent; color:var(--magenta); border:1px solid var(--border-strong);
+    font-family:var(--font-body); font-size:12px; font-weight:600;
+    padding:9px 16px; border-radius:999px; cursor:pointer;
+    transition:border-color .15s ease, background .15s ease, color .15s ease;
+  }
+  #force-refresh-btn:hover{border-color:var(--magenta); background:rgba(255,79,168,0.1);}
+  #force-refresh-btn:disabled{color:var(--text-dim); border-color:var(--border); cursor:default; background:transparent;}
+
+  #status-line{font-size:11px; color:var(--text-dim); text-align:left; margin-top:2px; min-height:0;}
+  #status-line.error{color:var(--red);}
+
+  .content{padding:0 24px;}
+
+  /* ---------- сводные панели ---------- */
+  .stats-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:12px;
+    margin-bottom:16px;
+    animation:riseIn .5s ease both;
+  }
+  .stat-card{
+    position:relative;
+    display:flex; align-items:center; gap:13px;
+    background:var(--panel);
+    border:1px solid var(--border); border-radius:14px;
+    padding:14px 16px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.25);
+    overflow:hidden;
+  }
+  .stat-card::before{
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background:var(--accent, var(--cyan)); opacity:0.75;
+  }
+  .stat-card.accent-cyan{--accent:var(--cyan);}
+  .stat-card.accent-indigo{--accent:var(--indigo);}
+  .stat-card.accent-magenta{--accent:var(--magenta);}
+  .stat-icon{
+    width:38px; height:38px; min-width:38px; border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    background:color-mix(in srgb, var(--accent, var(--cyan)) 16%, transparent);
+    color:var(--accent, var(--cyan));
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--accent, var(--cyan)) 28%, transparent) inset;
+  }
+  .stat-icon svg{width:19px; height:19px;}
+  .stat-body{min-width:0;}
+  .stat-card .label{font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dim); margin-bottom:4px; font-weight:600; white-space:nowrap;}
+  .stat-card .value{font-family:var(--font-mono); font-size:22px; font-weight:700; color:var(--text-bright); font-variant-numeric:tabular-nums; white-space:nowrap; letter-spacing:-0.02em;}
+  .stat-card .value-row{display:flex; align-items:baseline; justify-content:space-between; gap:8px; flex-wrap:wrap;}
+  .stat-card .value-cost{font-family:var(--font-mono); font-size:14px; font-weight:700; color:var(--gold); white-space:nowrap;}
+  .stat-card .value .unit{font-size:12px; color:var(--text-dim); font-family:var(--font-body); font-weight:600;}
+  .stat-card .value.price{color:var(--gold);}
+
+  .rate-limit-note{
+    background:rgba(242,84,91,0.1); border:1px solid rgba(242,84,91,0.3); border-radius:10px;
+    padding:10px 16px; font-size:12px; color:#f5b3b7; margin-bottom:20px;
+  }
+
+  section{margin-bottom:32px;}
+  section h2{
+    font-family:var(--font-display);
+    font-size:16px; font-weight:700;
+    text-transform:uppercase; letter-spacing:0.04em; color:var(--text-bright);
+    margin:0 0 14px; padding-left:12px; position:relative;
+  }
+  section h2::before{
+    content:''; position:absolute; left:0; top:2px; bottom:2px; width:3px;
+    border-radius:2px; background:var(--gold);
+  }
+
+  /* ---------- общий прогресс + крутость: одинаковый вид, в один ряд на десктопе ---------- */
+  .progress-row{display:flex; gap:20px; align-items:stretch; margin-bottom:22px;}
+  .progress-row > .mastery-card, .progress-row > .rarity-card{flex:1; min-width:0; margin-bottom:0;}
+
+  .mastery-bar-bg{height:8px; border-radius:4px; background:rgba(255,255,255,0.06); overflow:hidden; margin:2px 0 10px;}
+  .mastery-bar-fill{height:100%; border-radius:4px; background:var(--gold); transition:width .8s ease;}
+  .rarity-score .unit{font-size:0.5em; color:var(--text-dim); font-weight:600;}
+
+  .group-label{
+    grid-column:1 / -1;
+    font-size:11.5px; text-transform:uppercase; letter-spacing:0.07em; font-weight:700;
+    color:var(--text-dim); margin:20px 0 10px; display:flex; align-items:center; gap:8px;
+  }
+  .group-label::before{
+    content:''; width:6px; height:6px; border-radius:50%; background:var(--text-dim); flex-shrink:0;
+  }
+  .group-label.with::before{background:var(--gold); box-shadow:0 0 6px var(--gold-glow);}
+  .group-label.without::before{background:var(--indigo); box-shadow:0 0 6px var(--indigo-glow);}
+  .group-label:first-child{margin-top:0;}
+  .group-label .count{color:var(--cyan); font-family:var(--font-mono); font-weight:500; text-transform:none; letter-spacing:0;}
+
+  /* ---------- плитка игр ---------- */
+  .games-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(220px, 1fr));
+    gap:12px;
+  }
+  .game-tile{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    overflow:hidden; position:relative;
+    transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+  .game-tile:hover{
+    transform:translateY(-3px);
+    border-color:var(--steam-glow);
+    box-shadow:0 12px 26px rgba(0,0,0,0.4), 0 0 0 1px var(--steam-glow);
+  }
+  .game-tile .thumb{
+    position:relative;
+    width:100%; aspect-ratio:460/215;
+    background:var(--panel-2);
+  }
+  .game-tile .thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+  .game-tile.no-image .thumb img{display:none;}
+
+  .game-tile .tile-body{padding:10px 12px 11px;}
+  .game-tile .name{
+    font-size:12.5px; color:var(--text-bright); font-weight:600;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:6px;
+  }
+  /* Время в игре и оценка отзывов — в одну строку, друг напротив друга
+     (раньше бейдж отзыва лежал поверх обложки и перекрывал арт игры). */
+  .tile-meta{display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px;}
+  .tile-meta .hours{font-size:10.5px; color:var(--text-dim); white-space:nowrap;}
+  .tile-meta .review-badge{
+    display:flex; align-items:center; gap:4px;
+    font-size:9.5px; font-weight:700; white-space:nowrap;
+    padding:2px 7px; border-radius:5px; background:rgba(255,255,255,0.06);
+    min-width:0;
+  }
+  .tile-meta .review-badge .review-label{overflow:hidden; text-overflow:ellipsis;}
+  .game-tile .ach-numbers{font-size:10.5px; color:var(--text-dim); font-family:var(--font-mono); display:flex; justify-content:space-between; margin-bottom:5px; font-variant-numeric:tabular-nums;}
+  .game-tile .ach-numbers .pct{font-weight:700;}
+  .game-tile .ach-bar-bg{height:5px; background:rgba(255,255,255,0.1); border-radius:3px; overflow:hidden;}
+  .game-tile .ach-bar-fill{height:100%; border-radius:3px; transition:width .5s ease, background .3s ease; width:0;}
+  .game-tile.no-ach .tile-body{opacity:0.5;}
+  .game-tile .no-ach-label{font-size:10.5px; font-style:italic; color:var(--text-dim); display:none;}
+  .game-tile.no-ach .no-ach-label{display:block;}
+
+  .empty-state{
+    grid-column:1 / -1;
+    background:var(--panel); border:1px dashed var(--border-strong); border-radius:12px;
+    padding:32px 24px; text-align:center; color:var(--text-dim); font-size:13px;
+  }
+  .empty-state strong{color:var(--text-bright); display:block; margin-bottom:6px; font-size:15px; font-family:var(--font-display);}
+
+  /* ---------- вкладки Steam / RetroAchievements / Общая статистика ---------- */
+  .tab-row{padding:0 24px; margin-bottom:20px; display:flex; gap:8px;}
+  .tab-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    background:transparent; border:1px solid var(--border);
+    color:var(--text-dim); font-family:var(--font-body); font-weight:700; font-size:12.5px;
+    padding:9px 18px; border-radius:999px; cursor:pointer; letter-spacing:0.01em;
+    transition:border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .tab-btn svg{width:15px; height:15px;}
+  .tab-btn.active{
+    color:var(--text-bright); border-color:var(--border-strong);
+    background:rgba(224,165,48,0.14);
+  }
+  #tab-steam.active{background:rgba(43,196,168,0.16); border-color:rgba(43,196,168,0.4);}
+  #tab-retro.active{background:rgba(224,103,61,0.16); border-color:rgba(224,103,61,0.4);}
+  #tab-overall.active{background:rgba(224,165,48,0.16); border-color:rgba(224,165,48,0.4);}
+  .tab-btn:not(.active):hover{border-color:var(--border-strong); color:var(--text);}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block; animation:riseIn .4s ease both;}
+
+  /* ---------- RA: список-полоски вместо карточек — иконки RA (обычно
+     маленькие, обрезанные под квадрат с сайта) плохо смотрятся растянутыми
+     в крупный тайл, как у Steam. ---------- */
+  .retro-list{display:flex; flex-direction:column; gap:8px;}
+  .retro-row{
+    display:flex; align-items:center; gap:14px;
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:10px 16px; cursor:pointer;
+    transition:border-color .15s ease, transform .15s ease, background .15s ease;
+  }
+  .retro-row:hover{border-color:var(--retro-glow); transform:translateX(2px); background:var(--panel-2);}
+  .retro-row .icon-wrap{
+    width:42px; height:42px; border-radius:9px; overflow:hidden; flex-shrink:0;
+    background:var(--panel-2); display:flex; align-items:center; justify-content:center;
+  }
+  .retro-row .icon-wrap img{width:100%; height:100%; object-fit:cover;}
+  .retro-row .icon-wrap svg{width:18px; height:18px; color:var(--text-dim);}
+  .retro-row .info{flex:1; min-width:0;}
+  .retro-row .info .name{
+    font-weight:600; font-size:13px; color:var(--text-bright);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .retro-row .meta-line{display:flex; align-items:center; gap:8px; margin-top:3px; font-size:10.5px; color:var(--text-dim);}
+  .retro-row .console-chip{
+    font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;
+    padding:2px 6px; border-radius:5px; background:rgba(224,103,61,0.14); color:var(--retro); flex-shrink:0;
+  }
+  .retro-row .bars{width:130px; flex-shrink:0; display:none;}
+  .retro-row .bar-bg{height:5px; border-radius:3px; background:rgba(255,255,255,0.06); overflow:hidden;}
+  .retro-row .bar-bg + .bar-bg{margin-top:3px;}
+  .retro-row .bar-fill{height:100%; border-radius:3px;}
+  .retro-row .pct-block{width:52px; flex-shrink:0; text-align:right; font-family:var(--font-mono); font-weight:700; font-size:13px; color:var(--text-bright); font-variant-numeric:tabular-nums;}
+  .retro-row .status-badge{
+    display:inline-flex; align-items:center; justify-content:center; gap:4px;
+    font-size:9.5px; font-weight:700; white-space:nowrap;
+    padding:3px 8px; border-radius:6px; background:rgba(255,255,255,0.06);
+    flex-shrink:0; width:96px; text-align:center;
+  }
+  .retro-row .status-badge.mastered{color:var(--gold); background:rgba(224,165,48,0.14);}
+  .retro-row .status-badge.completed{color:var(--cyan); background:rgba(43,196,168,0.14);}
+
+
+  /* ---------- поиск/сортировка над сеткой игр ---------- */
+  .toolbar{display:flex; gap:10px; margin-bottom:14px; flex-wrap:nowrap;}
+  .toolbar input, .toolbar select{
+    background:var(--panel); border:1px solid var(--border); color:var(--text-bright);
+    font-family:var(--font-body); font-size:12.5px; padding:8px 12px; border-radius:9px; outline:none;
+  }
+  .toolbar input{flex:1 1 auto; min-width:0;}
+  .toolbar select{flex:0 0 auto; max-width:46%;}
+  .toolbar input::placeholder{color:var(--text-dim);}
+  .toolbar input:focus, .toolbar select:focus{border-color:var(--border-strong);}
+
+  /* ---------- модалка "все ачивки" ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(3,5,9,0.72); backdrop-filter:blur(4px);
+    display:none; align-items:flex-start; justify-content:center; z-index:100; padding:40px 16px; overflow-y:auto;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-box{
+    background:var(--bg-0); border:1px solid var(--border-strong); border-radius:16px;
+    width:100%; max-width:560px; padding:22px 24px 24px; box-shadow:0 20px 60px rgba(0,0,0,0.6);
+  }
+  .modal-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px;}
+  .modal-head h3{font-family:var(--font-display); font-size:18px; font-weight:700; color:var(--text-bright); margin:0;}
+  .modal-close{
+    background:transparent; border:1px solid var(--border); color:var(--text-dim); border-radius:8px;
+    width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
+  }
+  .modal-close:hover{border-color:var(--border-strong); color:var(--text-bright);}
+  .modal-close svg{width:15px; height:15px;}
+  .modal-loading, .modal-empty{color:var(--text-dim); font-size:13px; text-align:center; padding:24px 0;}
+  .ach-modal-list{display:flex; flex-direction:column; gap:8px; max-height:60vh; overflow-y:auto;}
+  .ach-modal-row{
+    display:flex; align-items:center; gap:12px; background:var(--panel); border:1px solid var(--border);
+    border-radius:10px; padding:10px 12px;
+  }
+  .ach-modal-row.unlocked{border-color:rgba(92,179,122,0.35);}
+  .ach-modal-row .ach-check{
+    width:22px; height:22px; min-width:22px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    background:rgba(255,255,255,0.06); color:var(--text-dim);
+  }
+  .ach-modal-row.unlocked .ach-check{background:rgba(92,179,122,0.16); color:var(--green);}
+  .ach-modal-row .ach-check svg{width:13px; height:13px;}
+  .ach-modal-row .ach-icon{width:36px; height:36px; min-width:36px; border-radius:8px; object-fit:cover; background:var(--panel-2);}
+  .ach-modal-row .ach-body{min-width:0; flex:1;}
+  .ach-modal-row .ach-name{font-size:12.5px; font-weight:600; color:var(--text-bright); margin-bottom:2px;}
+  .ach-modal-row.unlocked .ach-name{color:var(--text-bright);}
+  .ach-modal-row:not(.unlocked) .ach-name{color:var(--text);}
+  .ach-modal-row .ach-desc{font-size:11px; color:var(--text-dim); line-height:1.45;}
+  .ach-modal-row .ach-rarity{font-size:12px; font-weight:700; color:var(--gold); text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums;}
+
+  /* ---------- RetroAchievements-вкладка: RA-цвет золото уже переиспользован ---------- */
+  .compare-list{display:flex; flex-direction:column; gap:16px;}
+  .compare-row .compare-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px;}
+  .compare-row .compare-head .label{font-size:12.5px; color:var(--text-bright); font-weight:600;}
+  .compare-row .compare-head .total{font-size:11px; color:var(--text-dim); font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+  .compare-bar{display:flex; height:10px; border-radius:6px; overflow:hidden; background:rgba(255,255,255,0.06);}
+  .compare-bar .seg{height:100%;}
+  .compare-bar .seg.steam{background:var(--steam);}
+  .compare-bar .seg.retro{background:var(--retro);}
+  .compare-legend{display:flex; gap:18px; margin-top:16px; font-size:11px; color:var(--text-dim);}
+  .compare-legend span{display:flex; align-items:center; gap:6px;}
+  .compare-legend .dot{width:9px; height:9px; border-radius:3px;}
+
+  .rarity-list{display:flex; flex-direction:column; gap:8px;}
+  .rarity-row{
+    display:grid; grid-template-columns:20px 1fr 56px; align-items:center; gap:12px;
+    background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:10px 14px;
+  }
+  .rarity-row .rank{font-family:var(--font-mono); font-weight:700; color:var(--text-dim); font-size:13px;}
+  .rarity-row .info{min-width:0;}
+  .rarity-row .info .a-name{font-size:12.5px; color:var(--text-bright); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .rarity-row .info .a-game{font-size:10.5px; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+
+  .rarity-columns{display:flex; gap:20px; align-items:flex-start;}
+  .rarity-column{flex:1; min-width:0; display:flex; flex-direction:column; gap:8px;}
+  .rarity-column-head{
+    display:flex; align-items:center; gap:7px;
+    font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.04em;
+    color:var(--text-dim); margin-bottom:2px;
+  }
+  .rarity-column-head .dot{width:8px; height:8px; border-radius:50%; flex-shrink:0;}
+  .rarity-row .rarity-pct{font-size:13px; font-weight:700; color:var(--gold); text-align:right; font-variant-numeric:tabular-nums;}
+
+  footer{color:var(--text-dim); font-size:11px; text-align:center; margin-top:40px; padding:0 24px;}
+
+  /* ---------- "крутость" коллекции: тиры редкости ачивок, как качество предметов в WoW ---------- */
+  /* mastery-card использует ТОТ ЖЕ бокс-стиль, что и rarity-card, — чтобы
+     "общий прогресс" и "крутость" выглядели одинаково на всех вкладках. */
+  .rarity-card, .mastery-card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:18px; padding:20px 24px; margin-bottom:22px;
+    box-shadow:0 6px 18px rgba(0,0,0,0.22);
+    display:flex; align-items:center; gap:24px; flex-wrap:wrap;
+    animation:riseIn .5s ease .08s both;
+  }
+  .rarity-score-wrap{text-align:center; min-width:100px;}
+  .rarity-score{font-family:var(--font-mono); font-weight:700; font-size:34px; color:var(--text-bright); line-height:1; letter-spacing:-0.02em;}
+  .rarity-score-label{font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-dim); margin-top:4px;}
+  .rarity-body{flex:1; min-width:240px;}
+  .rarity-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color:var(--text-dim);
+    font-weight:700; margin-bottom:10px; display:flex; align-items:center; gap:6px;
+  }
+  .rarity-label svg{width:14px; height:14px; color:var(--gold);}
+  .rarity-tiers{display:grid; grid-template-columns:repeat(3, 1fr); gap:6px;}
+  .rarity-tier-chip{
+    display:flex; align-items:center; gap:6px;
+    padding:5px 9px; border-radius:999px;
+    background:var(--panel); border:1px solid var(--border);
+    font-size:11px; font-weight:600; color:var(--text); white-space:nowrap;
+  }
+  .rarity-tier-chip .dot{
+    width:9px; height:9px; flex-shrink:0;
+    clip-path:polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+    box-shadow:0 0 5px currentColor;
+  }
+  .rarity-tier-chip .count{color:var(--text-bright); font-family:var(--font-mono); font-variant-numeric:tabular-nums;}
+  .rarity-sub{font-size:12px; color:var(--text-dim); margin-top:8px; line-height:1.5;}
+  .rarity-sub + .rarity-sub{margin-top:4px;}
+  .rarity-sub strong{color:var(--text-bright); font-weight:700;}
+  .rarity-sub .badge{color:var(--gold); font-weight:700;}
+
+  /* ---------- календарь активности: разлоченные ачивки по дням, как GitHub-контрибьюшены ---------- */
+  .heatmap-wrap{width:100%;}
+  .heatmap-grid{display:flex; gap:3px; width:100%;}
+  .heatmap-week{display:flex; flex-direction:column; gap:3px; flex:1 1 0; min-width:0;}
+  .heatmap-cell{width:100%; aspect-ratio:1; border-radius:2px; background:rgba(255,255,255,0.05);}
+  .heatmap-cell[data-level="1"]{background:color-mix(in srgb, var(--indigo) 35%, var(--panel));}
+  .heatmap-cell[data-level="2"]{background:color-mix(in srgb, var(--indigo) 60%, var(--magenta) 10%);}
+  .heatmap-cell[data-level="3"]{background:color-mix(in srgb, var(--indigo) 40%, var(--magenta) 55%);}
+  .heatmap-cell[data-level="4"]{background:var(--magenta);}
+  .heatmap-legend{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:10.5px; color:var(--text-dim);}
+  .heatmap-legend .heatmap-cell{width:10px; height:10px;}
+  .heatmap-empty{color:var(--text-dim); font-size:13px; padding:8px 0;}
+
+  /* ---------- адаптивные переопределения — ДОЛЖНЫ идти последними в файле:
+     при равной специфичности CSS-правило, которое встречается позже в
+     исходнике, побеждает. Если положить медиа-запрос раньше базового
+     правила того же класса — на мобильных победит десктопный вариант,
+     а не адаптивный (именно так и было раньше — отсюда обрезанные чипы
+     редкости и другие кривые места на телефоне). ---------- */
+  @media (max-width: 900px){
+    .content{padding:0 18px;}
+    header{padding:12px 18px;}
+    .tab-row{padding:0 18px;}
+    footer{padding:0 18px;}
+    .games-grid{grid-template-columns:repeat(auto-fill, minmax(170px, 1fr));}
+    .mastery-card, .rarity-card{padding:18px 20px;}
+    .progress-row{flex-direction:column; gap:16px;}
+    .rarity-columns{flex-direction:column;}
+  }
+
+  @media (max-width: 600px){
+    .content{padding:0 14px;}
+    header{padding:12px 14px;}
+    .tab-row{padding:0 14px; flex-wrap:wrap; gap:6px;}
+    footer{padding:0 14px;}
+    .title-block h1{font-size:19px;}
+    .brand-mark{width:32px; height:32px; border-radius:9px;}
+    .brand-mark svg{width:16px; height:16px;}
+
+    .stats-grid{grid-template-columns:1fr 1fr; gap:10px;}
+    .stats-grid .stat-card:first-child{grid-column:1 / -1;}
+    .stat-card{padding:11px 12px; border-radius:11px; gap:10px;}
+    .stat-icon{width:32px; height:32px; min-width:32px; border-radius:8px;}
+    .stat-icon svg{width:16px; height:16px;}
+    .stat-card .label{font-size:9.5px;}
+    .stat-card .value{font-size:17px;}
+
+    .tab-btn{font-size:11px; padding:8px 12px; flex:1 1 auto; justify-content:center;}
+
+    .mastery-card, .rarity-card{padding:16px 14px; gap:14px;}
+    .rarity-score{font-size:26px;}
+    .rarity-label{font-size:9.5px;}
+    .rarity-tiers{grid-template-columns:repeat(2, 1fr);}
+    .rarity-tier-chip{font-size:10px; padding:5px 8px;}
+    .rarity-sub{font-size:11px;}
+
+    .toolbar select{font-size:11.5px; padding:8px 8px;}
+    .toolbar input{font-size:11.5px;}
+
+    .heatmap-grid{gap:2px;}
+
+    .retro-row{padding:9px 12px; gap:10px;}
+    .retro-row .icon-wrap{width:36px; height:36px; border-radius:8px;}
+    .retro-row .info .name{font-size:12px;}
+    .retro-row .meta-line{font-size:9.5px; gap:6px;}
+    .retro-row .console-chip{font-size:8px; padding:2px 5px;}
+    .retro-row .pct-block{width:40px; font-size:12px;}
+    .retro-row .status-badge{font-size:8px; padding:2px 5px; width:76px;}
+
+    .games-grid{grid-template-columns:1fr 1fr;}
+
+    /* На узком экране плитка становится тесной — оставляем в бейдже
+       только процент положительных отзывов, без текстового описания
+       ("Очень положительные" и т.п.), иначе бейдж занимает пол-плитки
+       и вылезает/переносится некрасиво. */
+    .tile-meta .review-badge .review-label{display:none;}
+    .tile-meta .review-badge{padding:2px 6px;}
+  }
+
+  @media (min-width: 560px){
+    .retro-row .bars{display:block;}
+  }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="12" width="4" height="8" rx="1" fill="currentColor"/><rect x="10" y="7" width="4" height="13" rx="1" fill="currentColor"/><rect x="16" y="3" width="4" height="17" rx="1" fill="currentColor"/></svg>
+      </div>
+      <div class="title-block">
+        <h1 id="page-title">CheevoScope</h1>
+        <div class="subtitle" id="last-updated">данных пока нет</div>
+        <div id="status-line"></div>
+      </div>
+    </div>
+    <div class="actions">
+      <button id="refresh-btn" onclick="triggerRefresh(activeTab === 'retro' ? 'full' : 'quick')" title="Быстро: список игр (+ новые, если появились) и достижения. Цены/отзывы не трогает, картинки подтягивает только для новых игр. На вкладке RA всегда полное обновление — там нет отдельного лёгкого режима.">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M20 11a8 8 0 10-2.34 5.66M20 5v6h-6" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Обновить
+      </button>
+      <button id="force-refresh-btn" onclick="triggerRefresh('full')" title="Жёсткий пересчёт с нуля: список игр, картинки, достижения, отзывы и цены — кэш полностью очищается, ничего не берётся из старых значений.">Обновить всё</button>
+      <button id="refresh-both-btn" onclick="triggerRefreshBoth()" style="display:none" title="Обновить только достижения на обеих платформах — без картинок/цен/отзывов Steam, но с полным RA-прогоном (нужен для очков по консолям и топ-10 редких)">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M20 11a8 8 0 10-2.34 5.66M20 5v6h-6" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Обновить достижения
+      </button>
+    </div>
+  </header>
+
+  <div class="tab-row">
+    <button class="tab-btn active" id="tab-steam" onclick="switchTab('steam')">
+      <svg viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="9.5" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="8.7" cy="8.3" r="2.4" fill="currentColor"/>
+        <path d="M8.7 8.3L14.2 13.9" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+        <circle cx="14.9" cy="14.6" r="2.1" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="14.9" cy="14.6" r="0.7" fill="currentColor"/>
+      </svg>
+      Steam
+    </button>
+    <button class="tab-btn" id="tab-retro" onclick="switchTab('retro')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4h10v4a5 5 0 01-10 0V4z" stroke-linejoin="round"/><path d="M7 5H4v1a4 4 0 004 4M17 5h3v1a4 4 0 01-4 4M9 20h6M12 14v6" stroke-linecap="round"/></svg>
+      RA
+    </button>
+    <button class="tab-btn" id="tab-overall" onclick="switchTab('overall')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="12" width="4" height="8" rx="1"/><rect x="10" y="7" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="17" rx="1"/></svg>
+      Общая статистика
+    </button>
+  </div>
+
+  <div class="tab-panel active" id="panel-steam">
+    <div class="content" id="content">
+      <div class="empty-state">
+        <strong>Библиотека пуста</strong>
+        Нажмите «Обновить», чтобы собрать данные из Steam. Первый сбор может занять несколько минут.
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-retro">
+    <div class="content" id="retro-content">
+      <div class="empty-state">
+        <strong>Данных пока нет</strong>
+        Нажмите «Обновить», чтобы собрать данные из RetroAchievements.
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-panel" id="panel-overall">
+    <div class="content" id="overall-content">
+      <div class="empty-state">
+        <strong>Нужны данные обеих платформ</strong>
+        Обновите вкладки Steam и RetroAchievements хотя бы по разу — здесь появится общая сводка.
+      </div>
+    </div>
+  </div>
+
+  <footer>обновляется по кнопке «Обновить» и само по себе раз в час</footer>
+</div>
+
+<div class="modal-overlay" id="ach-modal-overlay" onclick="if(event.target===this) closeAchievementsModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="ach-modal-title">Достижения</h3>
+      <button class="modal-close" onclick="closeAchievementsModal()" aria-label="Закрыть">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div id="ach-modal-body">
+      <div class="modal-loading">Загрузка…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==========================================================================
+// Рендеринг отчёта — ТОЧЕЧНЫЕ обновления DOM, а не полная пересборка.
+//
+// Раньше renderReport() каждый раз делал content.innerHTML = html — а во
+// время работы pipeline.py отчёт на диске обновляется после каждого этапа,
+// и фронт дёргает /api/status раз в 2 секунды, вызывая loadReport() на
+// каждом тике (см. pollStatus). Итог: весь блок .content пересоздавался
+// каждые 2 секунды, а у .stats-grid/.mastery-card есть CSS-анимация
+// появления (riseIn) — она проигрывалась заново при каждом пересоздании
+// элемента, из-за чего сводные карточки визуально "подпрыгивали" всё время
+// обновления. Плюс пересоздавались все <img> — лишнее мерцание.
+//
+// Теперь: skeleton (сетка карточек, дуга прогресса, контейнер плитки игр)
+// строится ОДИН раз при первом получении отчёта, дальше — только точечные
+// правки текста/стилей уже существующих узлов. Плитки игр хранятся в
+// tileMap по appid и переиспользуются между рендерами (картинка не
+// перезапрашивается, если её URL не изменился). Если новый отчёт побайтово
+// совпадает с прошлым — рендер вообще пропускается.
+// ==========================================================================
+
+let lastReportJson = null;
+let skeletonBuilt = false;
+const tileMap = new Map(); // appid -> DOM-узел плитки
+
+const ICONS = {
+  games: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="12" rx="2" stroke="currentColor" stroke-width="2"/><path d="M8 20h8M12 16v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2"/><path d="M12 7.5V12l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  tag: '<svg viewBox="0 0 24 24" fill="none"><path d="M11.5 3.5H5.5v6L14 18l6-6-8.5-8.5z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="9" cy="8" r="1.4" fill="currentColor"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2"/><path d="M8.5 12.3l2.4 2.4 4.6-5.4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  trophy: '<svg viewBox="0 0 24 24" fill="none"><path d="M7 4h10v4a5 5 0 01-10 0V4z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 5H4v1a4 4 0 004 4M17 5h3v1a4 4 0 01-4 4M9 20h6M12 14v6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+};
+
+// Тиры "крутости" ачивок по мировой редкости — та же идея, что качество
+// предметов в RPG (WoW и т.п.): чем меньше игроков открыли ачивку, тем выше
+// тир. Порядок и цвета должны совпадать с RARITY_TIERS в app/stats.py.
+const RARITY_TIER_META = [
+  { id: 'gold',   label: 'Легендарные', color: '#dcb35c' },
+  { id: 'purple', label: 'Эпические',   color: '#b478f0' },
+  { id: 'blue',   label: 'Редкие',      color: '#4a90d9' },
+  { id: 'green',  label: 'Необычные',   color: '#4cb389' },
+  { id: 'white',  label: 'Обычные',     color: '#d7dbe0' },
+  { id: 'gray',   label: 'Частые',      color: '#6b7280' },
+];
+
+function rarityChipsHtml(counts, idPrefix){
+  return RARITY_TIER_META.map(t => {
+    const count = (counts && counts[t.id]) || 0;
+    const countId = idPrefix ? ` id="${idPrefix}-${t.id}"` : '';
+    return `<span class="rarity-tier-chip"><span class="dot" style="background:${t.color}; color:${t.color};"></span>${t.label} <span class="count"${countId}>${count}</span></span>`;
+  }).join('');
+}
+
+function mergeRarityTiers(a, b){
+  const ta = (a && a.total_rated) || 0;
+  const tb = (b && b.total_rated) || 0;
+  const total = ta + tb;
+  const counts = {};
+  RARITY_TIER_META.forEach(t => {
+    counts[t.id] = ((a && a.counts && a.counts[t.id]) || 0) + ((b && b.counts && b.counts[t.id]) || 0);
+  });
+  const avgA = a ? (100 - a.coolness_score) : 0;
+  const avgB = b ? (100 - b.coolness_score) : 0;
+  const weightedAvg = total ? (avgA * ta + avgB * tb) / total : 0;
+  return { total_rated: total, counts, coolness_score: total ? Math.round((100 - weightedAvg) * 10) / 10 : 0 };
+}
+
+function raritySubText(rarityTiers){
+  const total = rarityTiers ? rarityTiers.total_rated : 0;
+  return total
+    ? `По редкости ${total} достижений — чем реже, тем выше тир.`
+    : 'Нужно полное «Обновить всё» — быстрое редкость не считает.';
+}
+
+function buildSkeleton(){
+  const content = document.getElementById('content');
+  content.innerHTML = `
+    <div class="stats-grid" id="stats-grid">
+      <div class="stat-card accent-cyan">
+        <div class="stat-icon">${ICONS.games}</div>
+        <div class="stat-body">
+          <div class="label">Библиотека</div>
+          <div class="value-row">
+            <div class="value" id="val-games-count">—</div>
+            <div class="value-cost" id="val-cost">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card accent-indigo">
+        <div class="stat-icon">${ICONS.clock}</div>
+        <div class="stat-body">
+          <div class="label">Общее время</div>
+          <div class="value"><span id="val-total-hours">—</span> <span class="unit">ч.</span></div>
+        </div>
+      </div>
+      <div class="stat-card accent-magenta">
+        <div class="stat-icon">${ICONS.trophy}</div>
+        <div class="stat-body">
+          <div class="label">Замастерено</div>
+          <div class="value" id="val-mastered" style="color:var(--gold)">—</div>
+        </div>
+      </div>
+    </div>
+    <div class="rate-limit-note" id="rate-limit-note" style="display:none"></div>
+    <div class="progress-row">
+    <div class="mastery-card" id="mastery-card">
+      <div class="rarity-score-wrap">
+        <div class="rarity-score"><span id="mastery-pct">0</span><span class="unit">%</span></div>
+        <div class="rarity-score-label">Прогресс</div>
+      </div>
+      <div class="rarity-body">
+        <span class="rarity-label">${ICONS.trophy} Общий прогресс по достижениям</span>
+        <div class="mastery-bar-bg"><div class="mastery-bar-fill" id="mastery-bar" style="width:0%"></div></div>
+        <div class="rarity-sub" id="mastery-sub-unlocked">—</div>
+        <div class="rarity-sub" id="mastery-sub-mastered">—</div>
+      </div>
+    </div>
+    <div class="rarity-card">
+      <div class="rarity-score-wrap">
+        <div class="rarity-score" id="rarity-score">0</div>
+        <div class="rarity-score-label">Крутость</div>
+      </div>
+      <div class="rarity-body">
+        <span class="rarity-label">${ICONS.trophy} Счётчик крутости</span>
+        <div class="rarity-tiers">${rarityChipsHtml(null, 'rarity-count')}</div>
+        <div class="rarity-sub" id="rarity-sub">—</div>
+      </div>
+    </div>
+    </div>
+    <section>
+      <h2>Библиотека</h2>
+      <div class="toolbar">
+        <input type="text" id="search-steam" placeholder="Поиск по названию…" oninput="filterGamesGrid('games-grid', 'search-steam', 'sort-steam')">
+        <select id="sort-steam" onchange="filterGamesGrid('games-grid', 'search-steam', 'sort-steam')">
+          <option value="name" selected>По алфавиту</option>
+          <option value="hours">По часам в игре</option>
+          <option value="achievements">По % достижений</option>
+        </select>
+      </div>
+      <div class="games-grid" id="games-grid"></div>
+    </section>
+  `;
+  tileMap.clear();
+}
+
+function updateStats(s){
+  document.getElementById('val-games-count').textContent = s.games_count + ' игр';
+  document.getElementById('val-total-hours').textContent = s.total_hours;
+  document.getElementById('val-cost').textContent = '$' + s.library_cost_usd;
+  document.getElementById('val-mastered').textContent = s.games_completed_100;
+
+  const note = document.getElementById('rate-limit-note');
+  if(s.games_price_rate_limited > 0){
+    note.style.display = '';
+    note.textContent = `⚠ ${s.games_price_rate_limited} цен не удалось получить из-за лимита запросов Steam — пересчитаются при следующем обновлении.`;
+  } else {
+    note.style.display = 'none';
+  }
+}
+
+function updateMastery(s){
+  const overallPct = s.achievements_overall_percent || 0;
+  const pctClamped = Math.max(0, Math.min(100, overallPct));
+  const complete = overallPct >= 100;
+
+  const bar = document.getElementById('mastery-bar');
+  bar.style.width = pctClamped + '%';
+  if(complete) bar.style.background = 'var(--gold)';
+
+  document.getElementById('mastery-pct').textContent = overallPct;
+  document.getElementById('mastery-sub-unlocked').innerHTML =
+    `Открыто <strong>${s.achievements_unlocked_total}</strong> из <strong>${s.achievements_available_total}</strong> достижений по всей библиотеке`;
+  document.getElementById('mastery-sub-mastered').innerHTML =
+    `<span class="badge">🏆 ${s.games_completed_100}</span> игр пройдено на 100%`;
+}
+
+// Календарь активности — сетка как GitHub-контрибьюшены: 7 строк (дни
+// недели, Пн-Вс), столбцы — недели, идут слева (год назад) направо
+// (сегодня). Заполняем ячейки строго по порядку дат — grid-auto-flow:column
+// сам раскладывает их по столбцам без ручного расчёта координат.
+function renderHeatmap(containerId, heatmapData){
+  const container = document.getElementById(containerId);
+  const data = heatmapData || {};
+  const entries = Object.keys(data);
+  if(!entries.length){
+    container.innerHTML = '<div class="heatmap-empty">Пока нет данных — нужно хотя бы одно обновление, чтобы собрать даты разлочки достижений.</div>';
+    return;
+  }
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const start = new Date(today);
+  start.setDate(start.getDate() - 370);
+  // Выравниваем начало на понедельник, чтобы первая колонка была целой неделей
+  const startWeekday = (start.getDay() + 6) % 7; // Пн=0 ... Вс=6
+  start.setDate(start.getDate() - startWeekday);
+
+  const days = [];
+  const cursor = new Date(start);
+  while(cursor <= today){
+    const key = cursor.toISOString().slice(0, 10);
+    days.push({ date: key, count: data[key] || 0 });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  const maxCount = Math.max(1, ...days.map(d => d.count));
+  const levelFor = c => {
+    if(c <= 0) return 0;
+    const ratio = c / maxCount;
+    if(ratio > 0.75) return 4;
+    if(ratio > 0.5) return 3;
+    if(ratio > 0.25) return 2;
+    return 1;
+  };
+
+  const weeks = [];
+  for(let i = 0; i < days.length; i += 7){
+    weeks.push(days.slice(i, i + 7));
+  }
+  const weeksHtml = weeks.map(week => {
+    const cells = week.map(d => {
+      const level = levelFor(d.count);
+      const label = d.count ? `${d.date}: ${d.count} дост.` : `${d.date}: нет активности`;
+      return `<div class="heatmap-cell" data-level="${level}" title="${label}"></div>`;
+    }).join('');
+    return `<div class="heatmap-week">${cells}</div>`;
+  }).join('');
+
+  container.innerHTML = `
+    <div class="heatmap-grid">${weeksHtml}</div>
+    <div class="heatmap-legend">
+      <span>Меньше</span>
+      <span class="heatmap-cell" data-level="0"></span>
+      <span class="heatmap-cell" data-level="1"></span>
+      <span class="heatmap-cell" data-level="2"></span>
+      <span class="heatmap-cell" data-level="3"></span>
+      <span class="heatmap-cell" data-level="4"></span>
+      <span>Больше</span>
+    </div>`;
+}
+
+function updateRarityCard(rarityTiers){
+  const counts = (rarityTiers && rarityTiers.counts) || {};
+  document.getElementById('rarity-score').textContent = rarityTiers ? rarityTiers.coolness_score : 0;
+  RARITY_TIER_META.forEach(t => {
+    const el = document.getElementById('rarity-count-' + t.id);
+    if(el) el.textContent = counts[t.id] || 0;
+  });
+  document.getElementById('rarity-sub').textContent = raritySubText(rarityTiers);
+}
+
+function buildGroupLabel(group, s){
+  const div = document.createElement('div');
+  div.className = 'group-label ' + group;
+  const text = group === 'with' ? 'С достижениями' : 'Без достижений';
+  const count = group === 'with' ? s.games_with_achievements : s.games_without_achievements;
+  div.innerHTML = `${text} <span class="count">(${count})</span>`;
+  return div;
+}
+
+function buildTile(g){
+  const tile = document.createElement('div');
+  tile.className = 'game-tile';
+  tile.dataset.appid = g.appid;
+  tile.addEventListener('click', () => openAchievementsModal('steam', g.appid, g.name));
+  const candidates = imgCandidates(g.appid, g);
+  tile.innerHTML = `
+    <div class="thumb">
+      <img src="${candidates[0]}" data-candidates='${JSON.stringify(candidates)}' data-fallback-idx="0" alt="" loading="lazy" onerror="handleThumbError(this)">
+    </div>
+    <div class="tile-body">
+      <div class="name"></div>
+      <div class="tile-meta">
+        <span class="hours"></span>
+        <span class="review-badge" style="display:none"><span class="review-label"></span><span class="review-pct"></span></span>
+      </div>
+      <div class="ach-numbers"><span class="nums"></span><span class="pct"></span></div>
+      <div class="ach-bar-bg"><div class="ach-bar-fill"></div></div>
+      <div class="no-ach-label">нет достижений</div>
+    </div>
+  `;
+  updateTile(tile, g);
+  return tile;
+}
+
+function updateTile(tile, g){
+  const hasAch = g.achievements_percent !== null && g.achievements_percent !== undefined;
+  tile.classList.toggle('no-ach', !hasAch);
+  tile.dataset.name = g.name;
+  tile.dataset.hours = g.hours;
+  tile.dataset.achpct = hasAch ? g.achievements_percent : -1;
+
+  const nameEl = tile.querySelector('.name');
+  if(nameEl.textContent !== g.name){
+    nameEl.textContent = g.name;
+    nameEl.title = g.name;
+  }
+
+  // Время в игре и оценка отзывов — одна строка, напротив друг друга
+  // (раньше бейдж отзыва лежал поверх обложки игры и перекрывал арт).
+  tile.querySelector('.hours').textContent = g.hours + ' ч.';
+  const badge = tile.querySelector('.review-badge');
+  if(g.review_desc){
+    const hasPercent = g.review_positive_percent !== null && g.review_positive_percent !== undefined;
+    badge.style.display = '';
+    badge.style.color = reviewColor(g.review_positive_percent);
+    const labelEl = badge.querySelector('.review-label');
+    const pctEl = badge.querySelector('.review-pct');
+    // Отдельные узлы для текста ("Очень положительные") и процента —
+    // на мобильном текстовый узел скрывается через CSS (см. media query),
+    // остаётся только процент, иначе бейдж не помещается в узкую плитку.
+    const labelText = g.review_desc + (hasPercent ? ' ·' : '');
+    if(labelEl.textContent !== labelText) labelEl.textContent = labelText;
+    const pctText = hasPercent ? g.review_positive_percent + '%' : '';
+    if(pctEl.textContent !== pctText) pctEl.textContent = pctText;
+  } else {
+    badge.style.display = 'none';
+  }
+
+  const numsWrap = tile.querySelector('.ach-numbers');
+  const barBg = tile.querySelector('.ach-bar-bg');
+  if(hasAch){
+    numsWrap.style.display = '';
+    barBg.style.display = '';
+    const color = achColor(g.achievements_percent);
+    numsWrap.querySelector('.nums').textContent = `${g.achievements_unlocked}/${g.achievements_total}`;
+    const pctEl = numsWrap.querySelector('.pct');
+    pctEl.textContent = g.achievements_percent + '%';
+    pctEl.style.color = color;
+    const fill = barBg.querySelector('.ach-bar-fill');
+    fill.style.width = g.achievements_percent + '%';
+    fill.style.background = color;
+  } else {
+    numsWrap.style.display = 'none';
+    barBg.style.display = 'none';
+  }
+
+  // Картинку трогаем, только если реально сменился набор кандидатов —
+  // иначе браузер просто продолжает показывать уже загруженный <img>,
+  // без повторного запроса и без мигания.
+  const img = tile.querySelector('img');
+  const candidates = imgCandidates(g.appid, g);
+  const newCandJson = JSON.stringify(candidates);
+  if(img.dataset.candidates !== newCandJson){
+    img.dataset.candidates = newCandJson;
+    img.dataset.fallbackIdx = '0';
+    img.src = candidates[0];
+    tile.classList.remove('no-image');
+  }
+}
+
+function placeAfter(container, node, afterNode){
+  const desired = afterNode ? afterNode.nextSibling : container.firstChild;
+  if(desired !== node) container.insertBefore(node, desired);
+}
+
+function updateGamesGrid(gamesGrid, s){
+  const container = document.getElementById('games-grid');
+
+  if(!gamesGrid.length){
+    container.innerHTML = '<div class="empty-state">Нет данных</div>';
+    tileMap.clear();
+    return;
+  }
+  const placeholder = container.querySelector('.empty-state');
+  if(placeholder) placeholder.remove();
+  container.querySelectorAll('.group-label').forEach(el => el.remove());
+
+  // По умолчанию — по алфавиту, но группировку "с достижениями"/"без"
+  // сохраняем: сортируем каждую группу отдельно и склеиваем.
+  const hasAchOf = g => g.achievements_percent !== null && g.achievements_percent !== undefined;
+  const withAch = gamesGrid.filter(hasAchOf).sort((a, b) => a.name.localeCompare(b.name));
+  const withoutAch = gamesGrid.filter(g => !hasAchOf(g)).sort((a, b) => a.name.localeCompare(b.name));
+  gamesGrid = withAch.concat(withoutAch);
+
+  const seen = new Set();
+  let anchor = null;
+  let lastGroup = null;
+
+  gamesGrid.forEach(g => {
+    const hasAch = g.achievements_percent !== null && g.achievements_percent !== undefined;
+    const group = hasAch ? 'with' : 'without';
+    if(group !== lastGroup){
+      const label = buildGroupLabel(group, s);
+      placeAfter(container, label, anchor);
+      anchor = label;
+      lastGroup = group;
+    }
+    let tile = tileMap.get(g.appid);
+    if(!tile){
+      tile = buildTile(g);
+      tileMap.set(g.appid, tile);
+    } else {
+      updateTile(tile, g);
+    }
+    placeAfter(container, tile, anchor);
+    anchor = tile;
+    seen.add(g.appid);
+  });
+
+  for(const [appid, el] of Array.from(tileMap.entries())){
+    if(!seen.has(appid)){
+      el.remove();
+      tileMap.delete(appid);
+    }
+  }
+}
+
+function renderReport(report){
+  if(!report || !report.summary) return;
+
+  // Отчёт побайтово не изменился с прошлого рендера — полностью пропускаем
+  // перерисовку (частый случай между этапами pipeline.py).
+  const json = JSON.stringify(report);
+  if(json === lastReportJson) return;
+  lastReportJson = json;
+
+  if(!skeletonBuilt){
+    buildSkeleton();
+    skeletonBuilt = true;
+  }
+
+  updateStats(report.summary);
+  updateMastery(report.summary);
+  updateRarityCard(report.rarity_tiers);
+  updateGamesGrid(report.games_grid || [], report.summary);
+  document.getElementById('last-updated').textContent = 'обновлено ' + fmtDate(report.generated_at);
+}
+
+function fmtDate(iso){
+  if(!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'});
+}
+
+function escapeHtml(str){
+  const d = document.createElement('div');
+  d.textContent = str ?? '';
+  return d.innerHTML;
+}
+
+// Steam раздаёт арт одновременно с двух CDN-провайдеров по одному и тому же
+// пути к файлу — Cloudflare и Akamai. Сам клиент/магазин Steam умеет
+// переключаться между ними, если один недоступен/тормозит (в некоторых
+// сетях именно Cloudflare-домен периодически отваливается, хотя сам Steam
+// у пользователя работает — он ходит по другому пути). Наш <img> так не
+// умеет сам, поэтому пробуем оба домена явно.
+const IMG_CDN_HOSTS = ['cdn.cloudflare.steamstatic.com', 'cdn.akamai.steamstatic.com'];
+// Варианты картинки на случай, если у конкретной игры не залит именно этот
+// файл в Steamworks: header.jpg (родной формат под рамку плитки, 460x215,
+// есть почти всегда) -> capsule_616x353 (крупнее и резче, но другие
+// пропорции — подгоняется под рамку с небольшой обрезкой по бокам) ->
+// library_hero.jpg (широкий арт из библиотеки Steam, огромное разрешение,
+// но есть не у всех) -> capsule_231x87.jpg / capsule_184x69.jpg (старые
+// мелкие капсулы — последний резерв: заметно мылятся при масштабировании) ->
+// library_600x900*.jpg (вертикальная обложка, другие пропорции, но есть
+// почти везде). object-fit:cover обрежет лишнее у вариантов с другими
+// пропорциями.
+const IMG_FILE_VARIANTS = [
+  'header.jpg',
+  'capsule_616x353.jpg',
+  'library_hero.jpg',
+  'capsule_231x87.jpg',
+  'library_600x900_2x.jpg',
+  'library_600x900.jpg',
+  'capsule_184x69.jpg',
+];
+
+// Настоящие URL картинок, полученные бэкендом (см. app/stats.py:
+// fetch_game_images). local_image — файл, реально скачанный и лежащий на
+// диске сервера, отдаётся через /static — приоритетнее всего: не зависит
+// от CDN Steam при повторных заходах, грузится с вашего же сервера.
+// header_image/capsule_imagev5/capsule_image — прямые ссылки на Steam,
+// резерв на случай, если локальный файл почему-то не скачался.
+function imgCandidates(appid, g){
+  const list = [];
+  if(g && g.local_image) list.push(g.local_image);
+  if(g && g.header_image) list.push(g.header_image);
+  if(g && g.capsule_imagev5) list.push(g.capsule_imagev5);
+  if(g && g.capsule_image) list.push(g.capsule_image);
+  for(const file of IMG_FILE_VARIANTS){
+    for(const host of IMG_CDN_HOSTS){
+      list.push(`https://${host}/steam/apps/${appid}/${file}`);
+    }
+  }
+  return list;
+}
+// onerror у <img>: последовательно перебираем все кандидаты (реальные URL от
+// Steam + угадывание по CDN, см. imgCandidates), и только когда все
+// исчерпаны — показываем пустой градиент (класс no-image).
+function handleThumbError(img){
+  let candidates;
+  try {
+    candidates = JSON.parse(img.dataset.candidates || '[]');
+  } catch(e) {
+    candidates = [];
+  }
+  const idx = parseInt(img.dataset.fallbackIdx || '0', 10) + 1;
+  if(idx < candidates.length){
+    img.dataset.fallbackIdx = String(idx);
+    img.src = candidates[idx];
+  } else {
+    img.closest('.game-tile').classList.add('no-image');
+  }
+}
+
+function achColor(pct){
+  if(pct === null || pct === undefined) return 'var(--text-dim)';
+  if(pct >= 100) return 'var(--gold)';
+  return 'var(--cyan)';
+}
+
+// Непрерывный градиент по проценту положительных отзывов (review_positive_percent):
+// 0% — красный, 50% — золото, 100% — зелёный, с плавной линейной
+// интерполяцией между соседними опорными точками (а не резкими ступенями,
+// как раньше по дискретной review_score).
+const REVIEW_GRADIENT_STOPS = [
+  { pct: 0,   rgb: [217, 86, 106] },  // красный
+  { pct: 50,  rgb: [224, 165, 48] },  // золото
+  { pct: 100, rgb: [92, 179, 122] },  // зелёный
+];
+function mixRgb(a, b, t){
+  return [0, 1, 2].map(i => Math.round(a[i] + (b[i] - a[i]) * t));
+}
+function reviewColor(percent){
+  if(percent === null || percent === undefined) return 'var(--text-dim)';
+  const p = Math.max(0, Math.min(100, percent));
+  let lo = REVIEW_GRADIENT_STOPS[0], hi = REVIEW_GRADIENT_STOPS[REVIEW_GRADIENT_STOPS.length - 1];
+  for(let i = 0; i < REVIEW_GRADIENT_STOPS.length - 1; i++){
+    if(p >= REVIEW_GRADIENT_STOPS[i].pct && p <= REVIEW_GRADIENT_STOPS[i+1].pct){
+      lo = REVIEW_GRADIENT_STOPS[i]; hi = REVIEW_GRADIENT_STOPS[i+1]; break;
+    }
+  }
+  const span = hi.pct - lo.pct;
+  const t = span === 0 ? 0 : (p - lo.pct) / span;
+  const [r, g, b] = mixRgb(lo.rgb, hi.rgb, t);
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
+let activeTab = 'steam';
+let steamPollTimer = null;
+let retroPollTimer = null;
+let retroLoaded = false;
+
+function switchTab(t){
+  ['steam','retro','overall'].forEach(name => {
+    document.getElementById('panel-' + name).classList.toggle('active', t === name);
+    document.getElementById('tab-' + name).classList.toggle('active', t === name);
+  });
+  activeTab = t;
+  const titles = {
+    steam: `CheevoScope <span style="color:var(--steam)">· Steam</span>`,
+    retro: `CheevoScope <span style="color:var(--retro)">· RetroAchievements</span>`,
+    overall: `CheevoScope <span style="color:var(--gold)">· Общая статистика</span>`,
+  };
+  document.getElementById('page-title').innerHTML = titles[t];
+
+  const isOverall = t === 'overall';
+  document.getElementById('refresh-btn').style.display = isOverall ? 'none' : '';
+  document.getElementById('force-refresh-btn').style.display = (isOverall || t === 'retro') ? 'none' : '';
+  document.getElementById('refresh-both-btn').style.display = isOverall ? '' : 'none';
+  if(!isOverall) document.getElementById('status-line').textContent = '';
+
+  if(t === 'retro' && !retroLoaded){
+    retroLoaded = true;
+    loadRetroReport();
+    pollRetroStatus();
+  }
+  if(t === 'overall'){
+    loadOverall();
+  }
+}
+
+async function loadReport(){
+  try{
+    const res = await fetch('/api/report');
+    const data = await res.json();
+    renderReport(data);
+  }catch(e){ /* тихо игнорируем — покажем при следующей попытке */ }
+}
+
+async function pollSteamStatus(){
+  try{
+    const res = await fetch('/api/status');
+    const s = await res.json();
+    const btn = document.getElementById('refresh-btn');
+    const forceBtn = document.getElementById('force-refresh-btn');
+    const line = document.getElementById('status-line');
+    line.classList.remove('error');
+
+    if(s.state === 'running'){
+      btn.disabled = true;
+      btn.classList.add('spinning');
+      forceBtn.disabled = true;
+      if(activeTab === 'steam'){
+        line.textContent = s.progress
+          ? `${stageLabel(s.stage)}: ${s.progress.done} / ${s.progress.total}`
+          : stageLabel(s.stage) + '...';
+      }
+      // Отчёт на диске обновляется после КАЖДОГО этапа (см. pipeline.py) —
+      // подгружаем его на каждом тике, чтобы список игр/достижения/отзывы/
+      // цены проявлялись на экране по мере готовности. renderReport сам
+      // решит, что реально изменилось, и обновит только это (см. выше).
+      loadReport();
+    } else if(s.state === 'error'){
+      btn.disabled = false;
+      btn.classList.remove('spinning');
+      forceBtn.disabled = false;
+      if(activeTab === 'steam'){
+        line.classList.add('error');
+        line.textContent = 'Ошибка: ' + (s.error || 'неизвестная');
+      }
+      clearInterval(steamPollTimer);
+    } else if(s.state === 'done'){
+      btn.disabled = false;
+      btn.classList.remove('spinning');
+      forceBtn.disabled = false;
+      if(activeTab === 'steam') line.textContent = '';
+      clearInterval(steamPollTimer);
+      loadReport();
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('spinning');
+      forceBtn.disabled = false;
+      if(activeTab === 'steam') line.textContent = '';
+      clearInterval(steamPollTimer);
+    }
+  }catch(e){ /* сервер мог ещё не подняться — просто попробуем на следующем тике */ }
+}
+
+function stageLabel(stage){
+  return {
+    games_list: 'Считываю библиотеку',
+    images: 'Загружаю картинки',
+    achievements: 'Собираю достижения',
+    library_cost: 'Считаю стоимость',
+    reviews: 'Собираю отзывы',
+    report: 'Собираю отчёт',
+    // RetroAchievements-этапы (см. app/retro_pipeline.py)
+    profile: 'Загружаю профиль',
+    games: 'Считываю библиотеку',
+    awards: 'Собираю награды',
+    game_details: 'Считаю очки по играм',
+  }[stage] || 'Обновляю';
+}
+
+async function triggerRefresh(mode){
+  const btn = document.getElementById('refresh-btn');
+  const forceBtn = document.getElementById('force-refresh-btn');
+  btn.disabled = true;
+  btn.classList.add('spinning');
+  forceBtn.disabled = true;
+  const isFull = mode === 'full';
+  const endpoint = activeTab === 'retro' ? '/api/retro/refresh' : '/api/refresh';
+  try{
+    const res = await fetch(`${endpoint}?mode=${mode}`, {method:'POST'});
+    const line = document.getElementById('status-line');
+    if(res.status === 409){
+      line.textContent = 'Обновление уже идёт';
+    } else if(res.status === 400){
+      const data = await res.json();
+      line.textContent = 'Ошибка: ' + (data.error || 'некорректный запрос');
+    } else if(isFull){
+      line.textContent = 'Пересчитываю с нуля...';
+    }
+  }catch(e){}
+
+  if(activeTab === 'retro'){
+    if(retroPollTimer) clearInterval(retroPollTimer);
+    retroPollTimer = setInterval(pollRetroStatus, 2000);
+    pollRetroStatus();
+  } else {
+    if(steamPollTimer) clearInterval(steamPollTimer);
+    steamPollTimer = setInterval(pollSteamStatus, 2000);
+    pollSteamStatus();
+  }
+}
+
+// ========================================================================
+// RetroAchievements — отдельная, более простая перерисовка (без точечного
+// DOM-диффинга, как у Steam-версии): набор данных на порядок меньше, полный
+// innerHTML-ребилд тут не создаёт заметных тормозов/мигания.
+// ========================================================================
+
+let lastRetroJson = null;
+
+async function loadRetroReport(){
+  try{
+    const res = await fetch('/api/retro/report');
+    const data = await res.json();
+    renderRetroReport(data);
+  }catch(e){ /* покажем при следующей попытке */ }
+}
+
+async function pollRetroStatus(){
+  try{
+    const res = await fetch('/api/retro/status');
+    const s = await res.json();
+    const btn = document.getElementById('refresh-btn');
+    const forceBtn = document.getElementById('force-refresh-btn');
+    const line = document.getElementById('status-line');
+
+    if(s.state === 'running'){
+      btn.disabled = true; btn.classList.add('spinning'); forceBtn.disabled = true;
+      if(activeTab === 'retro'){
+        line.classList.remove('error');
+        line.textContent = s.progress
+          ? `${stageLabel(s.stage)}: ${s.progress.done} / ${s.progress.total}`
+          : stageLabel(s.stage) + '...';
+      }
+      loadRetroReport();
+    } else if(s.state === 'error'){
+      btn.disabled = false; btn.classList.remove('spinning'); forceBtn.disabled = false;
+      if(activeTab === 'retro'){ line.classList.add('error'); line.textContent = 'Ошибка: ' + (s.error || 'неизвестная'); }
+      clearInterval(retroPollTimer);
+    } else if(s.state === 'done'){
+      btn.disabled = false; btn.classList.remove('spinning'); forceBtn.disabled = false;
+      if(activeTab === 'retro') line.textContent = '';
+      clearInterval(retroPollTimer);
+      loadRetroReport();
+    } else {
+      btn.disabled = false; btn.classList.remove('spinning'); forceBtn.disabled = false;
+      if(activeTab === 'retro') line.textContent = '';
+      clearInterval(retroPollTimer);
+    }
+  }catch(e){}
+}
+
+function renderRetroReport(report){
+  if(!report || !report.summary) return;
+  const json = JSON.stringify(report);
+  if(json === lastRetroJson) return;
+  lastRetroJson = json;
+
+  const s = report.summary;
+  const games = (report.games || []).slice().sort((a, b) => a.title.localeCompare(b.title));
+  const container = document.getElementById('retro-content');
+
+  const gamesHtml = games.length ? games.map(g => {
+    const statusClass = g.status === 'mastered' ? 'mastered' : (g.status === 'completed' ? 'completed' : '');
+    const statusText = g.status === 'mastered' ? 'Замастерено' : (g.status === 'completed' ? 'Завершено' : 'В процессе');
+    const barColor = g.status === 'mastered' ? 'var(--gold)' : 'var(--indigo)';
+    return `
+    <div class="game-tile retro-row" data-name="${escapeHtml(g.title)}" data-hardcore="${g.hardcore_percent}" data-softcore="${g.softcore_percent}"
+         onclick="openAchievementsModal('retro', ${g.game_id}, '${escapeHtml(g.title).replace(/'/g, "\\'")}')">
+      <div class="icon-wrap">
+        ${g.image_icon ? `<img src="https://media.retroachievements.org${g.image_icon}" alt="" loading="lazy">` : ICONS.trophy}
+      </div>
+      <div class="info">
+        <div class="name">${escapeHtml(g.title)}</div>
+        <div class="meta-line">
+          <span class="console-chip">${escapeHtml(g.console)}</span>
+          <span>${g.num_awarded_hardcore} / ${g.max_possible} · HC</span>
+        </div>
+      </div>
+      <div class="bars">
+        <div class="bar-bg"><div class="bar-fill" style="width:${g.hardcore_percent}%; background:${barColor}"></div></div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${g.softcore_percent}%; background:var(--cyan); opacity:0.6;"></div></div>
+      </div>
+      <div class="pct-block">${g.hardcore_percent}%</div>
+      <span class="status-badge ${statusClass}">${statusText}</span>
+    </div>`;
+  }).join('') : '<div class="empty-state"><strong>Нет данных</strong>Нажмите «Обновить».</div>';
+
+  container.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card accent-cyan">
+        <div class="stat-icon">${ICONS.trophy}</div>
+        <div class="stat-body"><div class="label">Очки (points)</div><div class="value">${s.games_count ? report.profile.points : 0}</div></div>
+      </div>
+      <div class="stat-card accent-indigo">
+        <div class="stat-icon">${ICONS.tag}</div>
+        <div class="stat-body"><div class="label">RetroPoints</div><div class="value">${report.profile.retro_points || 0}</div></div>
+      </div>
+      <div class="stat-card accent-magenta">
+        <div class="stat-icon">${ICONS.trophy}</div>
+        <div class="stat-body"><div class="label">Замастерено</div><div class="value" style="color:var(--gold)">${s.games_mastered}</div></div>
+      </div>
+    </div>
+    <div class="progress-row">
+    <div class="mastery-card">
+      <div class="rarity-score-wrap">
+        <div class="rarity-score">${s.overall_hardcore_percent || 0}<span class="unit">%</span></div>
+        <div class="rarity-score-label">Прогресс</div>
+      </div>
+      <div class="rarity-body">
+        <span class="rarity-label">${ICONS.trophy} Средний хардкор-прогресс</span>
+        <div class="mastery-bar-bg"><div class="mastery-bar-fill" style="width:${Math.max(0, Math.min(100, s.overall_hardcore_percent || 0))}%; ${(s.overall_hardcore_percent || 0) >= 100 ? 'background:var(--gold);' : ''}"></div></div>
+        <div class="rarity-sub">Открыто <strong>${s.achievements_hardcore_total}</strong> hardcore-достижений из <strong>${s.achievements_possible_total}</strong></div>
+        <div class="rarity-sub"><span class="badge">🏅 ${s.games_mastered}</span> игр замастерено</div>
+      </div>
+    </div>
+    <div class="rarity-card">
+      <div class="rarity-score-wrap">
+        <div class="rarity-score">${report.rarity_tiers ? report.rarity_tiers.coolness_score : 0}</div>
+        <div class="rarity-score-label">Крутость</div>
+      </div>
+      <div class="rarity-body">
+        <span class="rarity-label">${ICONS.trophy} Счётчик крутости</span>
+        <div class="rarity-tiers">${rarityChipsHtml(report.rarity_tiers && report.rarity_tiers.counts)}</div>
+        <div class="rarity-sub">${raritySubText(report.rarity_tiers)}</div>
+      </div>
+    </div>
+    </div>
+    <section>
+      <h2>Игры</h2>
+      <div class="toolbar">
+        <input type="text" id="search-retro" placeholder="Поиск по названию…" oninput="filterGamesGrid('retro-games-grid', 'search-retro', 'sort-retro')">
+        <select id="sort-retro" onchange="filterGamesGrid('retro-games-grid', 'search-retro', 'sort-retro')">
+          <option value="name" selected>По алфавиту</option>
+          <option value="hardcore">По hardcore %</option>
+          <option value="softcore">По softcore %</option>
+        </select>
+      </div>
+      <div class="retro-list" id="retro-games-grid">${gamesHtml}</div>
+    </section>
+  `;
+
+  document.getElementById('last-updated').textContent = activeTab === 'retro' ? 'обновлено ' + fmtDate(report.generated_at) : document.getElementById('last-updated').textContent;
+}
+
+function filterGamesGrid(gridId, searchId, sortId){
+  const grid = document.getElementById(gridId);
+  const query = document.getElementById(searchId).value.trim().toLowerCase();
+  const sortBy = document.getElementById(sortId).value;
+  const tiles = Array.from(grid.querySelectorAll('.game-tile'));
+
+  tiles.forEach(tile => {
+    const match = (tile.dataset.name || '').toLowerCase().includes(query);
+    tile.style.display = match ? '' : 'none';
+  });
+
+  const labels = Array.from(grid.querySelectorAll('.group-label'));
+
+  if(sortBy !== 'name'){
+    // Кастомная сортировка перемешивает группы "с достижениями"/"без" —
+    // заголовки групп теряют смысл, скрываем их.
+    labels.forEach(l => l.style.display = 'none');
+    const sorted = tiles.slice().sort((a, b) => {
+      if(sortBy === 'hardcore') return Number(b.dataset.hardcore || 0) - Number(a.dataset.hardcore || 0);
+      if(sortBy === 'softcore') return Number(b.dataset.softcore || 0) - Number(a.dataset.softcore || 0);
+      if(sortBy === 'hours') return Number(b.dataset.hours || 0) - Number(a.dataset.hours || 0);
+      if(sortBy === 'achievements') return Number(b.dataset.achpct ?? -1) - Number(a.dataset.achpct ?? -1);
+      return 0;
+    });
+    sorted.forEach(tile => grid.appendChild(tile));
+  } else {
+    // По алфавиту (значение по умолчанию) — тайлы уже отсортированы при
+    // построении сетки (см. updateGamesGrid / renderRetroReport), здесь
+    // только решаем видимость заголовков групп по итогам поиска.
+    let currentLabel = null;
+    let visibleCount = 0;
+    const finalize = () => { if(currentLabel) currentLabel.style.display = visibleCount ? '' : 'none'; };
+    Array.from(grid.children).forEach(el => {
+      if(el.classList.contains('group-label')){
+        finalize();
+        currentLabel = el;
+        visibleCount = 0;
+      } else if(el.classList.contains('game-tile') && el.style.display !== 'none'){
+        visibleCount++;
+      }
+    });
+    finalize();
+  }
+}
+
+// ========================================================================
+// "Общая статистика" — комбинирует уже загруженные report.json + retro_report.json,
+// без своего опроса API: просто складывает то, что посчитали Steam- и
+// RA-пайплайны по отдельности.
+// ========================================================================
+
+async function loadOverall(){
+  const container = document.getElementById('overall-content');
+  try{
+    const [steamRes, retroRes] = await Promise.all([fetch('/api/report'), fetch('/api/retro/report')]);
+    const steamReport = await steamRes.json();
+    const retroReport = await retroRes.json();
+    renderOverall(steamReport, retroReport);
+  }catch(e){
+    container.innerHTML = '<div class="empty-state">Не удалось загрузить сводку</div>';
+  }
+}
+
+let overallRefreshPoll = null;
+
+async function triggerRefreshBoth(){
+  const btn = document.getElementById('refresh-both-btn');
+  const line = document.getElementById('status-line');
+  btn.disabled = true;
+  btn.classList.add('spinning');
+  line.classList.remove('error');
+  line.textContent = 'Запускаю обновление достижений (Steam + RetroAchievements)…';
+
+  try{
+    await Promise.all([
+      fetch('/api/refresh?mode=quick', {method:'POST'}),
+      fetch('/api/retro/refresh?mode=full', {method:'POST'}),
+    ]);
+  }catch(e){}
+
+  // Переиспользуем уже существующие тайкеры/функции опроса статуса —
+  // pollSteamStatus/pollRetroStatus дёргают loadReport()/loadRetroReport()
+  // безусловно (не только когда их вкладка активна), так что данные
+  // реально обновятся, даже если человек остаётся на "Общей статистике".
+  if(steamPollTimer) clearInterval(steamPollTimer);
+  if(retroPollTimer) clearInterval(retroPollTimer);
+  steamPollTimer = setInterval(pollSteamStatus, 2000);
+  retroPollTimer = setInterval(pollRetroStatus, 2000);
+  pollSteamStatus();
+  pollRetroStatus();
+
+  if(overallRefreshPoll) clearInterval(overallRefreshPoll);
+  overallRefreshPoll = setInterval(checkBothDoneForOverall, 1500);
+  checkBothDoneForOverall();
+}
+
+async function checkBothDoneForOverall(){
+  try{
+    const [sRes, rRes] = await Promise.all([fetch('/api/status'), fetch('/api/retro/status')]);
+    const s = await sRes.json();
+    const r = await rRes.json();
+    const line = document.getElementById('status-line');
+
+    const describe = (label, st) => st.state === 'running'
+      ? `${label}: ${stageLabel(st.stage)}${st.progress ? ' ' + st.progress.done + '/' + st.progress.total : '...'}`
+      : `${label}: готово`;
+    if(activeTab === 'overall') line.textContent = describe('Steam', s) + ' · ' + describe('RA', r);
+
+    if(s.state !== 'running' && r.state !== 'running'){
+      clearInterval(overallRefreshPoll);
+      const btn = document.getElementById('refresh-both-btn');
+      btn.disabled = false;
+      btn.classList.remove('spinning');
+      if(activeTab === 'overall') line.textContent = '';
+      loadOverall();
+    }
+  }catch(e){}
+}
+
+function renderOverall(steamReport, retroReport){
+  const container = document.getElementById('overall-content');
+  const ss = steamReport.summary;
+  const rs = retroReport.summary;
+  if(!ss && !rs){
+    container.innerHTML = `
+      <div class="empty-state">
+        <strong>Нужны данные обеих платформ</strong>
+        Обновите вкладки Steam и RetroAchievements хотя бы по разу — здесь появится общая сводка.
+      </div>`;
+    return;
+  }
+
+  const steamGames = ss ? ss.games_count : 0;
+  const retroGames = rs ? rs.games_count : 0;
+  const steamAch = ss ? ss.achievements_unlocked_total : 0;
+  const retroAch = rs ? rs.achievements_hardcore_total : 0;
+  const steamMastered = ss ? ss.games_completed_100 : 0;
+  const retroMastered = rs ? rs.games_mastered : 0;
+
+  const totalGames = steamGames + retroGames;
+  const totalAch = steamAch + retroAch;
+  const totalMastered = steamMastered + retroMastered;
+
+  const totalPossible = (ss ? ss.achievements_available_total : 0) + (rs ? rs.achievements_possible_total : 0);
+  const overallPct = totalPossible ? Math.round(1000 * totalAch / totalPossible) / 10 : 0;
+
+  const pct = (a, total) => total ? Math.round(1000 * a / total) / 10 : 0;
+  const mergedRarity = mergeRarityTiers(ss ? steamReport.rarity_tiers : null, rs ? retroReport.rarity_tiers : null);
+
+  container.innerHTML = `
+    <div class="stats-grid">
+      <div class="stat-card accent-cyan">
+        <div class="stat-icon">${ICONS.games}</div>
+        <div class="stat-body">
+          <div class="label">Игр всего</div>
+          <div class="value">${steamGames} <span class="unit">+ ${retroGames}</span></div>
+        </div>
+      </div>
+      <div class="stat-card accent-indigo">
+        <div class="stat-icon">${ICONS.trophy}</div>
+        <div class="stat-body"><div class="label">Всего открыто</div><div class="value">${totalAch}</div></div>
+      </div>
+      <div class="stat-card accent-magenta">
+        <div class="stat-icon">${ICONS.check}</div>
+        <div class="stat-body"><div class="label">Замастерено</div><div class="value" style="color:var(--gold)">${totalMastered}</div></div>
+      </div>
+    </div>
+    <div class="progress-row">
+    <div class="mastery-card">
+      <div class="rarity-score-wrap">
+        <div class="rarity-score">${overallPct}<span class="unit">%</span></div>
+        <div class="rarity-score-label">Прогресс</div>
+      </div>
+      <div class="rarity-body">
+        <span class="rarity-label">${ICONS.trophy} Общий прогресс по всем платформам</span>
+        <div class="mastery-bar-bg"><div class="mastery-bar-fill" style="width:${Math.max(0, Math.min(100, overallPct))}%; ${overallPct >= 100 ? 'background:var(--gold);' : ''}"></div></div>
+        <div class="rarity-sub">Средневзвешенный процент открытых достижений</div>
+        <div class="rarity-sub"><span class="badge">🏆 ${totalMastered}</span> игр закрыто на 100%</div>
+      </div>
+    </div>
+    <div class="rarity-card">
+      <div class="rarity-score-wrap">
+        <div class="rarity-score">${mergedRarity.coolness_score}</div>
+        <div class="rarity-score-label">Крутость</div>
+      </div>
+      <div class="rarity-body">
+        <span class="rarity-label">${ICONS.trophy} Счётчик крутости (обе платформы)</span>
+        <div class="rarity-tiers">${rarityChipsHtml(mergedRarity.counts)}</div>
+        <div class="rarity-sub">${raritySubText(mergedRarity)}</div>
+      </div>
+    </div>
+    </div>
+    <section>
+      <h2>Активность за год</h2>
+      <div class="heatmap-wrap" id="overall-heatmap-wrap"></div>
+    </section>
+    <section>
+      <h2>Сравнение платформ</h2>
+      <div class="compare-list">
+        <div class="compare-row">
+          <div class="compare-head"><span class="label">Игры</span><span class="total">${steamGames} + ${retroGames} = ${totalGames}</span></div>
+          <div class="compare-bar"><div class="seg steam" style="width:${pct(steamGames, totalGames)}%"></div><div class="seg retro" style="width:${pct(retroGames, totalGames)}%"></div></div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-head"><span class="label">Достижения</span><span class="total">${steamAch} + ${retroAch} = ${totalAch}</span></div>
+          <div class="compare-bar"><div class="seg steam" style="width:${pct(steamAch, totalAch)}%"></div><div class="seg retro" style="width:${pct(retroAch, totalAch)}%"></div></div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-head"><span class="label">100%</span><span class="total">${steamMastered} + ${retroMastered} = ${totalMastered}</span></div>
+          <div class="compare-bar"><div class="seg steam" style="width:${pct(steamMastered, totalMastered)}%"></div><div class="seg retro" style="width:${pct(retroMastered, totalMastered)}%"></div></div>
+        </div>
+      </div>
+      <div class="compare-legend">
+        <span><span class="dot" style="background:var(--steam)"></span>Steam</span>
+        <span><span class="dot" style="background:var(--retro)"></span>RetroAchievements</span>
+      </div>
+    </section>
+    <section>
+      <h2>Самые редкие открытые достижения</h2>
+      <div class="rarity-columns">
+        <div class="rarity-column">
+          <div class="rarity-column-head"><span class="dot" style="background:var(--steam)"></span>Steam</div>
+          ${renderRarestColumn(steamReport.rarest_achievements)}
+        </div>
+        <div class="rarity-column">
+          <div class="rarity-column-head"><span class="dot" style="background:var(--retro)"></span>RetroAchievements</div>
+          ${renderRarestColumn(retroReport.rarest_achievements)}
+        </div>
+      </div>
+    </section>
+  `;
+  renderHeatmap('overall-heatmap-wrap', ss ? steamReport.activity_heatmap : null);
+}
+
+function renderRarestColumn(list){
+  const top = (list || []).slice(0, 10);
+  if(!top.length){
+    return '<div class="empty-state">Пока нет данных — нужно хотя бы одно полное «Обновить всё» (быстрое обновление эту статистику не считает).</div>';
+  }
+  return '<div class="rarity-list">' + top.map((a, i) => `
+    <div class="rarity-row">
+      <span class="rank">${i + 1}</span>
+      <div class="info">
+        <div class="a-name">${escapeHtml(a.name)}</div>
+        <div class="a-game">${escapeHtml(a.game)}</div>
+      </div>
+      <span class="rarity-pct">${a.global_percent}%</span>
+    </div>`).join('') + '</div>';
+}
+
+// ========================================================================
+// Модалка "все ачивки" — общая для Steam- и RA-плиток.
+// ========================================================================
+
+async function openAchievementsModal(platform, id, title){
+  const overlay = document.getElementById('ach-modal-overlay');
+  const body = document.getElementById('ach-modal-body');
+  document.getElementById('ach-modal-title').textContent = title || 'Достижения';
+  body.innerHTML = '<div class="modal-loading">Загрузка…</div>';
+  overlay.classList.add('show');
+
+  const url = platform === 'retro' ? `/api/retro/game/${id}/achievements` : `/api/game/${id}/achievements`;
+  try{
+    const res = await fetch(url);
+    const data = await res.json();
+    renderAchievementsModal(data, platform);
+  }catch(e){
+    body.innerHTML = '<div class="modal-empty">Не удалось загрузить список достижений</div>';
+  }
+}
+
+function closeAchievementsModal(){
+  document.getElementById('ach-modal-overlay').classList.remove('show');
+}
+
+function renderAchievementsModal(data, platform){
+  const body = document.getElementById('ach-modal-body');
+  if(data && data.error){
+    body.innerHTML = `<div class="modal-empty">Ошибка на сервере: ${escapeHtml(data.error)}</div>`;
+    return;
+  }
+  if(!data || !data.available || !data.achievements || !data.achievements.length){
+    body.innerHTML = '<div class="modal-empty">Нет данных о достижениях для этой игры</div>';
+    return;
+  }
+  body.innerHTML = `<div class="ach-modal-list">${data.achievements.map(a => {
+    const unlocked = platform === 'retro' ? a.unlocked_hardcore || a.unlocked : a.unlocked;
+    const icon = platform === 'retro' ? a.badge_url : (unlocked ? a.icon : (a.icon_gray || a.icon));
+    const rarityText = a.global_percent !== null && a.global_percent !== undefined ? a.global_percent + '%' : '—';
+    return `
+    <div class="ach-modal-row ${unlocked ? 'unlocked' : ''}">
+      <div class="ach-check">${unlocked ? ICONS.check : ''}</div>
+      ${icon ? `<img class="ach-icon" src="${icon}" alt="" loading="lazy">` : ''}
+      <div class="ach-body">
+        <div class="ach-name">${escapeHtml(a.name)}</div>
+        <div class="ach-desc" title="${escapeHtml(a.description)}">${escapeHtml(a.description)}</div>
+      </div>
+      <div class="ach-rarity">${rarityText}</div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+switchTab('steam');
+loadReport();
+pollSteamStatus();
+
+// PWA: регистрация service worker'а (кэш только статической оболочки,
+// живые данные /api/* никогда не кэшируются — см. static/sw.js).
+if('serviceWorker' in navigator){
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {/* не критично, просто не будет офлайн-оболочки */});
+  });
+}
+</script>
+</body>
+</html>
