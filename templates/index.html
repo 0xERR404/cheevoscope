@@ -1771,6 +1771,45 @@ switchTab('steam');
 loadReport();
 pollSteamStatus();
 
+// Свайп влево/вправо переключает вкладки Steam ⇄ RA ⇄ Общая статистика —
+// удобно на телефоне, где до кнопок вкладок тянуться неудобно.
+(function initSwipeNav(){
+  const TAB_ORDER = ['steam', 'retro', 'overall'];
+  const MIN_DIST = 60;      // короче — считаем тапом/скроллом, не свайпом
+  const MAX_OFF_AXIS = 80;  // слишком большой вертикальный увод — это скролл, а не свайп
+  let startX = 0, startY = 0, tracking = false;
+
+  function onStart(e){
+    if(e.touches.length !== 1) { tracking = false; return; }
+    // Свайп внутри модалки достижений или по самому списку карточек не
+    // трогаем — там либо своя прокрутка, либо это просто клик по плитке.
+    if(e.target.closest('#ach-modal-overlay')) { tracking = false; return; }
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    tracking = true;
+  }
+
+  function onEnd(e){
+    if(!tracking) return;
+    tracking = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    if(Math.abs(dx) < MIN_DIST || Math.abs(dy) > MAX_OFF_AXIS) return;
+
+    const idx = TAB_ORDER.indexOf(activeTab);
+    if(dx < 0 && idx < TAB_ORDER.length - 1){
+      switchTab(TAB_ORDER[idx + 1]);  // свайп влево -> следующая вкладка
+    } else if(dx > 0 && idx > 0){
+      switchTab(TAB_ORDER[idx - 1]);  // свайп вправо -> предыдущая вкладка
+    }
+  }
+
+  const wrap = document.querySelector('.wrap');
+  wrap.addEventListener('touchstart', onStart, {passive: true});
+  wrap.addEventListener('touchend', onEnd, {passive: true});
+})();
+
 // PWA: регистрация service worker'а (кэш только статической оболочки,
 // живые данные /api/* никогда не кэшируются — см. static/sw.js).
 if('serviceWorker' in navigator){
